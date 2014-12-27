@@ -6,7 +6,12 @@
  */
 #include <Adafruit_NeoPixel.h>
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(50, 6, NEO_GRB + NEO_KHZ800);
-double samples[8];
+
+#define SAMPLE_SIZE 24
+#define INSTANCE_SAMPLE 128
+
+
+long samples[SAMPLE_SIZE];
 int index = 0;
 //double variance[8];
 //int vIndex = 0;
@@ -15,67 +20,63 @@ int index = 0;
 
 int pix = 25;
 int curPix = 0;
-int leftChannel = 0;
+int leftChannel = 5;
 float avg = 0;
 int pastPix[3];
-double total = 0;
+long total = 0;
 // instance average
 float iavg = 0;
 //current instance total
-int citotal = 0;
+//int citotal = 0;
 //last instance total
-int litotal = 5;
+//int litotal = 5;
 int debugbtn = 10;
 int hm = 0; // hit/miss counter
 int hitth = 130; // hit threshhold;
+int base = 0;
 /** 
  * The artical said to use arrays but I think the same could be achived
  * with pure math.
  */
 void setup(){
-  //Serial.begin(115200);
+  Serial.begin(115200);
   pinMode(6, OUTPUT);
   pinMode(0, INPUT);
   //we'll start by getting an overall avrage of noise.
-  for(int i = 0; i < 8; i++){
+  for(int i = 0; i < SAMPLE_SIZE; i++){
     samples[i] = analogRead(leftChannel);
     total = total + samples[i];
     //variance[i] = 1.1;
     //vTotal = vTotal + variance[i];
   }
   //vAvg = vTotal/8;
-  avg = total/8;
+  avg = total/SAMPLE_SIZE;
+  base = avg;
+  debug("base:", base);
 }
 
 void loop(){
   //this will be the avarge instance energy for 0.2 of a second.
   //1024 bytes should represent about 0.2 of a second.
   //set the current instance total to 0;
-  //debug("avarage:", avg);
-  //debug("total:", total);
+  debug("avarage:", avg);
+  debug("total:", total);
   total = total - samples[index];
   samples[index] = 0;
-  //int time = millis();
-  for(int i = 0; i < 128; i++){
-    //accumulate the current instance total;
-    double in = analogRead(leftChannel);
-    if(in > 0 ){
-      samples[index] = samples[index] + in;
-    }
-  }
-  //debug("loop execution ti:", iavg);
-  iavg = samples[index]/128;
+  //samples[index] = getSample();
+  samples[index] = getSample();
+  iavg = samples[index]/float(INSTANCE_SAMPLE);
   // if we have more energy in our instance avarage than average we have beat! 
-  //debug("loop instance avarage:", iavg);
-  //debug("loop instance total:", samples[index]);
+  debug("loop instance avarage:", iavg);
+  debug("loop instance total:", samples[index]);
   //if(iavg > avg){
     //calVariance(iavg - avg);
   //}
   //debug("avarage variance:", vAvg);
-  if(iavg > (avg*130)){
-   //debug("Beat", iavg );
-   strip.setPixelColor(pix + curPix, makeColor((iavg - (avg*100) )*100));
-   strip.setPixelColor(pix - curPix, makeColor((iavg - (avg*100) )*100));
+  if(iavg > (avg*1.10)){
+   debug("Beat", iavg );
+   strip.setPixelColor(pix + curPix, makeColor((iavg - (avg*1) )*5));
+   strip.setPixelColor(pix - curPix, makeColor((iavg - (avg*1) )*5));
    strip.show();
    curPix++;
    hm + 10;
@@ -90,18 +91,37 @@ void loop(){
   //for(int i = 0; i < 128; i++){
     //total = total + samples[i];
   //}
-  samples[index] = iavg;
+  //samples[index] = iavg;
   total = total + samples[index];
+    
+   
+  debug("value is:", samples[index]);
+   
   index++;
-  if(index == 8){
+  if(index == SAMPLE_SIZE){
     index = 0;
   }
+  debug("index is:", index);
+  debug("value is:", samples[index]);
   
-  avg = total/1024;
+  avg = total/float(SAMPLE_SIZE * INSTANCE_SAMPLE);
   
   //curPix = curPix * -1;
   if(curPix > pix) curPix = 0;
   
+}
+
+double getSample(){
+    for(int i = 0; i < 128; i++){
+      //accumulate the current instance total;
+      //delay(0.1);
+      double in = analogRead(leftChannel);
+      in = abs(in - base);
+      if(in > 0 ){
+        samples[index] = samples[index] + in;
+      }
+    }
+  return samples[index];
 }
 
 void debug(String lable, double value){
