@@ -7,9 +7,13 @@
 #include <Adafruit_NeoPixel.h>
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(50, 6, NEO_GRB + NEO_KHZ800);
 
-#define SAMPLE_SIZE 24
+#define SAMPLE_SIZE 12
 #define INSTANCE_SAMPLE 128
 
+
+int pMed = 70;
+
+int pHigh = 120;
 
 long samples[SAMPLE_SIZE];
 int index = 0;
@@ -32,14 +36,17 @@ float iavg = 0;
 //int litotal = 5;
 int debugbtn = 10;
 int hm = 0; // hit/miss counter
-int hitth = 130; // hit threshhold;
+int hitth = 1; // hit threshhold;
 int base = 0;
+
+int lastColor = 0;
+
 /** 
  * The artical said to use arrays but I think the same could be achived
  * with pure math.
  */
 void setup(){
-  Serial.begin(115200);
+  //Serial.begin(115200);
   pinMode(6, OUTPUT);
   pinMode(0, INPUT);
   //we'll start by getting an overall avrage of noise.
@@ -73,18 +80,7 @@ void loop(){
     //calVariance(iavg - avg);
   //}
   //debug("avarage variance:", vAvg);
-  if(iavg > (avg*1.10)){
-   debug("Beat", iavg );
-   strip.setPixelColor(pix + curPix, makeColor((iavg - (avg*1) )*5));
-   strip.setPixelColor(pix - curPix, makeColor((iavg - (avg*1) )*5));
-   strip.show();
-   curPix++;
-   hm + 10;
-  }else{
-    dimmLEDS();
-    hm- 10;
-  }
-  hitth = hitth + hm/2;
+   publishLEDs();
   // magic math!
   // replace the last instance total with the current instance total 
   //total = 0;
@@ -107,15 +103,15 @@ void loop(){
   avg = total/float(SAMPLE_SIZE * INSTANCE_SAMPLE);
   
   //curPix = curPix * -1;
+  //delay(30);
   if(curPix > pix) curPix = 0;
-  
 }
 
 double getSample(){
     for(int i = 0; i < 128; i++){
       //accumulate the current instance total;
-      //delay(0.1);
       double in = analogRead(leftChannel);
+      //delay(1);
       in = abs(in - base);
       if(in > 0 ){
         samples[index] = samples[index] + in;
@@ -125,16 +121,123 @@ double getSample(){
 }
 
 void debug(String lable, double value){
-  if(digitalRead(debugbtn) == HIGH){
+  /*if(digitalRead(debugbtn) == HIGH){
     Serial.print(lable);
     Serial.println(value);
+  }*/
+}
+
+void publishLEDs(){
+  
+   if(avg > pHigh){
+     theaterChase(makeColor((iavg - (avg*1) )*7));
+     strip.show();     
+     curPix = 0;
+     return;
+   }
+  
+  if((iavg + hitth) > (avg*1.10)){
+    debug("Beat", iavg );
+ 
+    if(avg > pHigh){
+       theaterChase(makeColor((iavg - (avg*1) )*7));
+       strip.show();     
+       curPix = 0;
+       return;
+    }   
+    strip.setPixelColor(pix + curPix, makeColor((iavg - (avg*1) )*7));
+    strip.setPixelColor(pix - curPix, makeColor((iavg - (avg*1) )*7));
+    strip.show();
+    curPix++;
+    hm + 10;
+  }else{
+    
+    if(avg > pHigh){
+       //theaterChase(makeColor(0));
+       //strip.show();     
+       //curPix = 0;
+       return;
+    }   
+    
+    dimmLEDS();
+    hm- 10;
+    
+    
+    
   }
+  hitth = hitth + hm/2;
+
+}
+int q = 0;
+long nextTime;
+void theaterChase(uint32_t c) {
+  //for (int j=0; j<1; j++) {  //do 10 cycles of chasing
+    //for (int q=0; q < 3; q++) {
+
+      if(millis() < nextTime){
+        return;
+      } 
+      
+      for (int i = q; i < strip.numPixels(); i=i+3) {
+        uint32_t last = strip.getPixelColor(i);
+        if (last < makeColor(50)){
+          last = c;
+        }
+        strip.setPixelColor(pix + i, c);    //turn every third pixel on        
+        strip.setPixelColor(pix - i, c);    //turn every third pixel on
+        c = last;
+        
+      }
+      //strip.show();
+      
+      for (int i = q-1; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(pix + i, 0);    //turn every third pixel on        
+        strip.setPixelColor(pix - i, 0);    //turn every third pixel on
+      }
+      q++;
+      if(q == 4){
+        q = 0;
+      }
+      nextTime = millis() + 50;
+    //}
+  //}
+}
+int j = 0;
+void coolPattern0(uint32_t c){
+    //for (int j=0; j<1; j++) {  //do 10 cycles of chasing
+    //for (int q=0; q < 3; q++) {
+      for (int i = j; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(pix + i, c);    //turn every third pixel on        
+        strip.setPixelColor(pix - i, c);    //turn every third pixel on
+      }
+      strip.show();
+      
+      for (int i = j-1; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(pix + i, 0);    //turn every third pixel on        
+        strip.setPixelColor(pix - i, 0);    //turn every third pixel on
+      }
+      q++;
+      if(j == pix){
+        j = 0;
+      }
+    //}
+  //}
 }
 
 void dimmLEDS(){
+  
+  if(avg > pHigh){
+        /*lastColor = strip.getPixelColor(curPix);
+        strip.setPixelColor(pix + curPix - 2, 0);
+        strip.setPixelColor(pix + curPix - 3, lastColor);
+        strip.setPixelColor(pix - curPix + 2, 0);
+        strip.setPixelColor(pix - curPix + 3, lastColor);*/
+    return;
+  }
+  
   uint32_t c;
   int j = 0;
-  for(int i = 0; i < 58; i++){
+  for(int i = 0; i < strip.numPixels(); i++){
     c = strip.getPixelColor(i);
     uint8_t
     r = ((uint8_t)(c >> 16)),
@@ -142,8 +245,10 @@ void dimmLEDS(){
     b = ((uint8_t)c);
     strip.setPixelColor(i, r/1.1, g/1.1, b/1.1);
     j = j + r + g + b;
-    if (j < 100){
-      curPix = 0;
+    if(avg < pMed){
+      if (j < 100){
+        curPix = 0;
+      }
     }
   }
   strip.show();
