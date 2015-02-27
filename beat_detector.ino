@@ -179,13 +179,27 @@ void theaterChase(uint32_t c) {
       } 
       
       for (int i = q; i < strip.numPixels(); i=i+3) {
-        uint32_t last = strip.getPixelColor(i);
-        if (last < makeColor(50)){
-          last = c;
+         uint32_t last = strip.getPixelColor(pix + i);
+        if(last == 0){
+        	last = strip.getPixelColor(pix + i-1);
+        }
+        if(last == 0){
+        	last = strip.getPixelColor(pix + i-2);
+        }
+        if(last == 0){
+        	last = strip.getPixelColor(pix + i-3);
+        }
+        if(last == 0){
+        	last = strip.getPixelColor(pix + i-4);
         }
         strip.setPixelColor(pix + i, c);    //turn every third pixel on        
         strip.setPixelColor(pix - i, c);    //turn every third pixel on
-        c = last;
+        if(i > 3){
+    	  c = last;
+        }
+        if(c < strip.Color(64, 0, 0){
+        	c = strip.Color(0, 0, 0);
+        }
         
       }
       //strip.show();
@@ -194,6 +208,7 @@ void theaterChase(uint32_t c) {
         strip.setPixelColor(pix + i, 0);    //turn every third pixel on        
         strip.setPixelColor(pix - i, 0);    //turn every third pixel on
       }
+      strip.show();
       q++;
       if(q == 4){
         q = 0;
